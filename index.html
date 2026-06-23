@@ -1,0 +1,378 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;background:#222;color:#f0f0f0;max-width:390px;margin:0 auto;min-height:100vh;}
+.header{background:#1a1a1a;padding:14px 16px 10px;border-bottom:1px solid #333;}
+.header-top{display:flex;align-items:center;gap:8px;margin-bottom:2px;}
+.dot{width:9px;height:9px;background:#f45a2a;border-radius:50%;flex-shrink:0;}
+.h-title{font-size:16px;font-weight:600;color:#f0f0f0;}
+.h-sub{font-size:11px;color:#888;margin-left:17px;}
+.tabs{display:flex;background:#1a1a1a;border-bottom:1px solid #2e2e2e;overflow-x:auto;scrollbar-width:none;}
+.tabs::-webkit-scrollbar{display:none;}
+.tab{padding:10px 14px;font-size:12px;color:#888;border-bottom:2px solid transparent;white-space:nowrap;cursor:pointer;transition:color .15s,border-color .15s;flex-shrink:0;}
+.tab.active{color:#f45a2a;border-bottom-color:#f45a2a;font-weight:600;}
+.day-view{padding:12px;}
+.add-btn{display:flex;align-items:center;justify-content:center;gap:6px;background:rgba(244,90,42,.1);border:1.5px dashed rgba(244,90,42,.4);border-radius:10px;padding:10px;color:#f45a2a;font-size:13px;cursor:pointer;width:100%;margin-bottom:10px;transition:background .15s;}
+.add-btn:hover{background:rgba(244,90,42,.18);}
+.add-btn svg{width:16px;height:16px;stroke:#f45a2a;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+
+.item{background:#2d2d2d;border:1px solid #3a3a3a;border-radius:12px;margin-bottom:8px;overflow:hidden;transition:border-color .15s,opacity .15s,transform .1s;}
+.item.drag-over{border-color:#f45a2a;border-style:dashed;}
+.item.dragging{opacity:.45;transform:scale(.98);}
+.item-header{display:flex;align-items:center;gap:8px;padding:11px 10px 11px 6px;}
+.grip{width:28px;height:36px;display:flex;align-items:center;justify-content:center;cursor:grab;color:#555;flex-shrink:0;}
+.grip:active{cursor:grabbing;}
+.grip svg{width:14px;height:14px;stroke:#666;fill:none;stroke-width:2;stroke-linecap:round;}
+.cat-bar{width:3px;height:34px;border-radius:2px;flex-shrink:0;}
+.item-info{flex:1;min-width:0;}
+.item-time{font-size:11px;color:#888;font-weight:500;}
+.item-name{font-size:14px;font-weight:500;color:#f0f0f0;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.item-place{font-size:11px;color:#999;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.item-btns{display:flex;gap:5px;flex-shrink:0;align-items:center;}
+.ibtn{width:32px;height:32px;border-radius:8px;border:1px solid #3d3d3d;background:#252525;color:#aaa;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;}
+.ibtn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;pointer-events:none;}
+.ibtn:hover{border-color:#f45a2a;color:#f45a2a;background:rgba(244,90,42,.12);}
+.ibtn.del:hover{border-color:#e24b4a;color:#e24b4a;background:rgba(226,75,74,.12);}
+.ibtn.map-off{opacity:.3;cursor:not-allowed;}
+.ibtn.map-off:hover{border-color:#3d3d3d;color:#aaa;background:#252525;}
+
+.notes-wrap{border-top:1px solid #333;}
+.notes-toggle{display:flex;align-items:center;gap:5px;padding:8px 12px;cursor:pointer;font-size:12px;color:#888;user-select:none;transition:color .15s;}
+.notes-toggle:hover{color:#f45a2a;}
+.notes-toggle svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s;}
+.notes-toggle svg.open{transform:rotate(180deg);}
+.notes-preview{font-size:11px;color:#666;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
+.notes-body{padding:0 12px 10px;}
+.notes-ta{width:100%;background:#222;border:1px solid #3a3a3a;border-radius:8px;padding:8px;font-size:12px;color:#ccc;font-family:inherit;line-height:1.5;resize:vertical;min-height:60px;outline:none;transition:border-color .15s;}
+.notes-ta:focus{border-color:rgba(244,90,42,.5);color:#f0f0f0;}
+
+.empty{text-align:center;padding:36px 20px;color:#555;font-size:13px;}
+
+/* Modal */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:flex-end;justify-content:center;z-index:200;padding:0;}
+.modal{background:#272727;border-radius:18px 18px 0 0;padding:20px 16px 32px;width:100%;max-width:390px;max-height:88vh;overflow-y:auto;}
+.modal-drag-line{width:40px;height:4px;background:#444;border-radius:2px;margin:0 auto 16px;}
+.modal-title{font-size:15px;font-weight:600;color:#f0f0f0;margin-bottom:14px;}
+.modal label{display:block;font-size:11px;color:#888;margin-bottom:4px;margin-top:12px;}
+.modal label:first-of-type{margin-top:0;}
+.modal input,.modal select,.modal textarea{width:100%;padding:9px 11px;background:#1e1e1e;border:1px solid #3a3a3a;border-radius:9px;color:#f0f0f0;font-size:13px;font-family:inherit;outline:none;transition:border-color .15s;}
+.modal input:focus,.modal select:focus,.modal textarea:focus{border-color:#f45a2a;}
+.modal select option{background:#2a2a2a;}
+.modal textarea{resize:vertical;min-height:72px;line-height:1.5;}
+.cat-row{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px;}
+.cat-opt{padding:8px 10px;border-radius:8px;border:1.5px solid #3a3a3a;background:#1e1e1e;color:#aaa;font-size:12px;cursor:pointer;text-align:center;transition:all .15s;}
+.cat-opt.sel{border-color:#f45a2a;color:#f45a2a;background:rgba(244,90,42,.1);}
+.modal-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px;}
+.btn-save{padding:11px;background:#f45a2a;border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:600;cursor:pointer;transition:opacity .15s;}
+.btn-save:hover{opacity:.88;}
+.btn-cancel{padding:11px;background:transparent;border:1.5px solid #3a3a3a;border-radius:10px;color:#aaa;font-size:14px;cursor:pointer;transition:border-color .15s;}
+.btn-cancel:hover{border-color:#888;}
+</style>
+</head>
+<body>
+<h2 class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">MC × BOF 釜山影展行程表 6/26–6/30</h2>
+
+<div class="header">
+  <div class="header-top"><div class="dot"></div><div class="h-title">MC × BOF 行程表</div></div>
+  <div class="h-sub">釜山國際影展 · 2025年6月26–30日</div>
+</div>
+
+<div class="tabs" id="tabs"></div>
+<div class="day-view" id="day-view"></div>
+
+<!-- Modal -->
+<div class="overlay" id="overlay" style="display:none;">
+  <div class="modal">
+    <div class="modal-drag-line"></div>
+    <div class="modal-title" id="modal-title">新增行程</div>
+    <label>時間</label>
+    <input type="time" id="m-time" value="09:00">
+    <label>行程名稱</label>
+    <input type="text" id="m-name" placeholder="例：記者會">
+    <label>地點</label>
+    <input type="text" id="m-place" placeholder="例：釜山電影中心">
+    <label>Google Maps 連結</label>
+    <input type="url" id="m-map" placeholder="https://maps.google.com/...">
+    <label>備註</label>
+    <textarea id="m-note" placeholder="補充說明..."></textarea>
+    <label>類別</label>
+    <div class="cat-row" id="cat-row"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btn-cancel">取消</button>
+      <button class="btn-save" id="btn-save">儲存</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+
+<script>
+const DAYS = ['6/26 四','6/27 五','6/28 六','6/29 日','6/30 一'];
+const CATS = [
+  {key:'orange',label:'🎬 影展 / 放映',color:'#f45a2a'},
+  {key:'blue',label:'🎤 採訪 / 記者',color:'#378add'},
+  {key:'green',label:'🍽 餐食 / 休息',color:'#639922'},
+  {key:'purple',label:'🎉 活動 / 派對',color:'#7f77dd'},
+  {key:'pink',label:'📸 拍攝 / 宣傳',color:'#d4537e'},
+  {key:'gray',label:'📋 其他',color:'#888780'},
+];
+const catColor = k => (CATS.find(c=>c.key===k)||CATS[5]).color;
+
+let currentDay = 0;
+let editId = null;
+let dragSrcIdx = null;
+let nextId = 50;
+
+const DEFAULT_DATA = {
+  0:[
+    {id:1,time:'10:00',name:'BOF 開幕典禮',place:'釜山電影中心',map:'https://maps.google.com/?q=Busan+Cinema+Center',cat:'orange',note:'',open:false},
+    {id:2,time:'14:00',name:'媒體記者會',place:'樂天飯店 釜山',map:'https://maps.google.com/?q=Hotel+Lotte+Busan',cat:'blue',note:'',open:false},
+    {id:3,time:'19:00',name:'開幕式紅毯',place:'奧辛德電影院',map:'',cat:'purple',note:'',open:false},
+  ],
+  1:[
+    {id:4,time:'09:00',name:'導演專訪',place:'媒體中心 B室',map:'',cat:'blue',note:'',open:false},
+    {id:5,time:'13:00',name:'午餐',place:'札嘎其市場',map:'https://maps.google.com/?q=Jagalchi+Market+Busan',cat:'green',note:'',open:false},
+    {id:6,time:'20:00',name:'電影放映',place:'CGV 萬象城',map:'https://maps.google.com/?q=CGV+Centum+City+Busan',cat:'orange',note:'',open:false},
+  ],
+  2:[
+    {id:7,time:'11:00',name:'座談討論',place:'BIFF Village',map:'https://maps.google.com/?q=BIFF+Village+Busan',cat:'blue',note:'',open:false},
+    {id:8,time:'15:00',name:'映後 Q&A',place:'海雲台美格博',map:'',cat:'orange',note:'',open:false},
+    {id:9,time:'21:00',name:'映後派對',place:'釜山柏悅酒店',map:'https://maps.google.com/?q=Park+Hyatt+Busan',cat:'purple',note:'',open:false},
+  ],
+  3:[
+    {id:10,time:'10:30',name:'晨間拍攝',place:'海雲台海灘',map:'https://maps.google.com/?q=Haeundae+Beach+Busan',cat:'pink',note:'',open:false},
+    {id:11,time:'14:00',name:'頒獎典禮彩排',place:'釜山電影中心',map:'',cat:'orange',note:'',open:false},
+    {id:12,time:'18:00',name:'VIP 晚宴',place:'朝鮮西方飯店',map:'',cat:'purple',note:'',open:false},
+  ],
+  4:[
+    {id:13,time:'10:00',name:'閉幕典禮',place:'釜山電影中心',map:'https://maps.google.com/?q=Busan+Cinema+Center',cat:'orange',note:'',open:false},
+    {id:14,time:'14:00',name:'收尾會議',place:'團隊飯店',map:'',cat:'gray',note:'',open:false},
+  ],
+};
+
+let data = JSON.parse(JSON.stringify(DEFAULT_DATA));
+
+// Firebase 即時同步設定（只新增同步，不改動原本 UI）
+const firebaseConfig = {
+  apiKey: "AIzaSyAfRPFvLbC3ke19Ko0DRl4vI_7-A2dM7NI",
+  authDomain: "mc-x-bof.firebaseapp.com",
+  projectId: "mc-x-bof",
+  storageBucket: "mc-x-bof.firebasestorage.app",
+  messagingSenderId: "451343674583",
+  appId: "1:451343674583:web:199e4c6eb773b1253f9492",
+  measurementId: "G-J64PK6CDGM"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const plannerRef = db.collection("planner").doc("main");
+
+let cloudReady = false;
+let isRemoteUpdate = false;
+
+function normalizeData(input){
+  const base = JSON.parse(JSON.stringify(DEFAULT_DATA));
+  if(!input || typeof input !== 'object') return base;
+  for(let i=0;i<DAYS.length;i++){
+    const key = String(i);
+    if(Array.isArray(input[key])) base[i] = input[key];
+    else if(Array.isArray(input[i])) base[i] = input[i];
+  }
+  return base;
+}
+
+function getMaxId(){
+  let max = 0;
+  Object.values(data).forEach(arr=>{
+    if(Array.isArray(arr)){
+      arr.forEach(item=>{
+        const n = Number(item.id);
+        if(!Number.isNaN(n)) max = Math.max(max, n);
+      });
+    }
+  });
+  return max;
+}
+
+function saveToCloud(){
+  if(!cloudReady || isRemoteUpdate) return;
+  plannerRef.set({
+    data,
+    currentDay,
+    nextId,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).catch(err=>{
+    console.error('Firebase 儲存失敗：', err);
+  });
+}
+
+function startFirebaseSync(){
+  plannerRef.onSnapshot((snap)=>{
+    isRemoteUpdate = true;
+
+    if(snap.exists){
+      const cloud = snap.data() || {};
+      data = normalizeData(cloud.data);
+      currentDay = Number.isInteger(cloud.currentDay) ? cloud.currentDay : currentDay;
+      nextId = Math.max(cloud.nextId || nextId, getMaxId() + 1);
+      cloudReady = true;
+      renderTabs();
+      renderDay();
+    }else{
+      cloudReady = true;
+      nextId = Math.max(nextId, getMaxId() + 1);
+      saveToCloud();
+    }
+
+    isRemoteUpdate = false;
+  }, (err)=>{
+    console.error('Firebase 即時同步失敗：', err);
+    cloudReady = true;
+  });
+}
+
+// SVG helpers
+const svgGrip = `<svg viewBox="0 0 14 14"><circle cx="4" cy="3" r="1.2" fill="#666"/><circle cx="10" cy="3" r="1.2" fill="#666"/><circle cx="4" cy="7" r="1.2" fill="#666"/><circle cx="10" cy="7" r="1.2" fill="#666"/><circle cx="4" cy="11" r="1.2" fill="#666"/><circle cx="10" cy="11" r="1.2" fill="#666"/></svg>`;
+const svgMap = `<svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>`;
+const svgEdit = `<svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+const svgTrash = `<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`;
+const svgChevron = `<svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>`;
+const svgPlus = `<svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
+
+function renderTabs(){
+  document.getElementById('tabs').innerHTML = DAYS.map((d,i)=>
+    `<div class="tab${i===currentDay?' active':''}" onclick="switchDay(${i})">${d}</div>`
+  ).join('');
+}
+
+function switchDay(i){ currentDay=i; renderTabs(); renderDay(); saveToCloud(); }
+
+function renderDay(){
+  const items = data[currentDay]||[];
+  let h = `<button class="add-btn" onclick="openModal(null)">${svgPlus} 新增行程</button>`;
+  if(!items.length){
+    h += `<div class="empty">尚未有行程<br>點上方按鈕新增</div>`;
+  } else {
+    items.forEach((item,idx)=>{
+      const cc = catColor(item.cat);
+      const hasMap = item.map && item.map.trim();
+      const notePreview = item.note ? item.note.substring(0,30)+(item.note.length>30?'…':'') : '';
+      h += `<div class="item${item._drag?' dragging':''}" id="item-${item.id}" draggable="true"
+        ondragstart="dStart(event,${idx})" ondragover="dOver(event,${idx})" ondrop="dDrop(event,${idx})" ondragend="dEnd(event)">
+        <div class="item-header">
+          <div class="grip" title="拖曳排序">${svgGrip}</div>
+          <div class="cat-bar" style="background:${cc}"></div>
+          <div class="item-info">
+            <div class="item-time">${item.time}</div>
+            <div class="item-name">${item.name||'（未命名）'}</div>
+            ${item.place?`<div class="item-place">${item.place}</div>`:''}
+          </div>
+          <div class="item-btns">
+            <button class="ibtn${hasMap?'':' map-off'}" title="${hasMap?'開啟 Google Maps':'尚無地圖連結'}" onclick="${hasMap?`openLink('${item.map.replace(/'/g,"\\'")}')`:''}">${svgMap}</button>
+            <button class="ibtn" title="編輯" onclick="openModal(${item.id})">${svgEdit}</button>
+            <button class="ibtn del" title="刪除" onclick="delItem(${item.id})">${svgTrash}</button>
+          </div>
+        </div>
+        <div class="notes-wrap">
+          <div class="notes-toggle" onclick="toggleNote(${item.id})">
+            <svg class="${item.open?'open':''}" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+            <span>備註</span>
+            ${notePreview?`<span class="notes-preview">${notePreview}</span>`:''}
+          </div>
+          ${item.open?`<div class="notes-body"><textarea class="notes-ta" rows="3" placeholder="輸入備註..." onchange="saveNote(${item.id},this.value)" onblur="saveNote(${item.id},this.value)">${item.note}</textarea></div>`:''}
+        </div>
+      </div>`;
+    });
+  }
+  document.getElementById('day-view').innerHTML = h;
+}
+
+function toggleNote(id){
+  const item = data[currentDay].find(i=>i.id===id);
+  if(item){ item.open=!item.open; renderDay(); saveToCloud(); }
+}
+
+function saveNote(id,val){
+  const item = data[currentDay].find(i=>i.id===id);
+  if(item){ item.note=val; saveToCloud(); }
+}
+
+function delItem(id){
+  data[currentDay] = data[currentDay].filter(i=>i.id!==id);
+  renderDay();
+  saveToCloud();
+}
+
+// Drag & drop
+function dStart(e,idx){ dragSrcIdx=idx; setTimeout(()=>{ const el=document.querySelectorAll('.item')[idx]; if(el) el.classList.add('dragging'); },0); }
+function dOver(e,idx){ e.preventDefault(); document.querySelectorAll('.item').forEach(el=>el.classList.remove('drag-over')); const el=document.querySelectorAll('.item')[idx]; if(el&&idx!==dragSrcIdx) el.classList.add('drag-over'); }
+function dDrop(e,idx){ e.preventDefault(); if(dragSrcIdx===null||dragSrcIdx===idx) return; const arr=data[currentDay]; const moved=arr.splice(dragSrcIdx,1)[0]; arr.splice(idx,0,moved); dragSrcIdx=null; renderDay(); saveToCloud(); }
+function dEnd(e){ document.querySelectorAll('.item').forEach(el=>{ el.classList.remove('dragging'); el.classList.remove('drag-over'); }); dragSrcIdx=null; }
+
+// Modal
+function buildCatRow(sel){
+  return CATS.map(c=>`<div class="cat-opt${c.key===sel?' sel':''}" onclick="selectCat('${c.key}')" data-cat="${c.key}">${c.label}</div>`).join('');
+}
+function selectCat(k){
+  document.querySelectorAll('.cat-opt').forEach(el=>{ el.classList.toggle('sel', el.dataset.cat===k); });
+}
+function selectedCat(){ return (document.querySelector('.cat-opt.sel')||{dataset:{cat:'gray'}}).dataset.cat; }
+
+function openModal(id){
+  editId=id;
+  const ov=document.getElementById('overlay');
+  ov.style.display='flex';
+  document.getElementById('modal-title').textContent = id?'編輯行程':'新增行程';
+  if(id){
+    const it=data[currentDay].find(i=>i.id===id);
+    document.getElementById('m-time').value=it.time;
+    document.getElementById('m-name').value=it.name;
+    document.getElementById('m-place').value=it.place;
+    document.getElementById('m-map').value=it.map;
+    document.getElementById('m-note').value=it.note;
+    document.getElementById('cat-row').innerHTML=buildCatRow(it.cat);
+  } else {
+    document.getElementById('m-time').value='09:00';
+    document.getElementById('m-name').value='';
+    document.getElementById('m-place').value='';
+    document.getElementById('m-map').value='';
+    document.getElementById('m-note').value='';
+    document.getElementById('cat-row').innerHTML=buildCatRow('orange');
+  }
+}
+function closeModal(){ document.getElementById('overlay').style.display='none'; editId=null; }
+function saveModal(){
+  const name=document.getElementById('m-name').value.trim();
+  if(!name){ document.getElementById('m-name').focus(); return; }
+  const obj={ time:document.getElementById('m-time').value, name, place:document.getElementById('m-place').value.trim(), map:document.getElementById('m-map').value.trim(), note:document.getElementById('m-note').value.trim(), cat:selectedCat(), open:false };
+  if(editId){
+    const it=data[currentDay].find(i=>i.id===editId);
+    const wasOpen=it.open;
+    Object.assign(it,obj);
+    it.open=wasOpen;
+    it.note=obj.note;
+  } else {
+    data[currentDay].push({id:nextId++,...obj});
+    data[currentDay].sort((a,b)=>a.time.localeCompare(b.time));
+  }
+  closeModal(); renderDay(); saveToCloud();
+}
+
+function openLink(url){ window.open(url,'_blank'); }
+
+document.getElementById('btn-cancel').onclick=closeModal;
+document.getElementById('btn-save').onclick=saveModal;
+document.getElementById('overlay').onclick=function(e){ if(e.target===this) closeModal(); };
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeModal(); });
+
+renderTabs(); renderDay();
+startFirebaseSync();
+</script>
+</body>
+</html>
