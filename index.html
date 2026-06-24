@@ -129,7 +129,10 @@ const CATS = [
   {key:'pink',label:'📸 拍攝 / 宣傳',color:'#d4537e'},
   {key:'gray',label:'📋 其他',color:'#888780'},
 ];
-const catColor = k => (CATS.find(c=>c.key===k)||CATS[5]).color;
+function catColor(k){
+  const found = CATS.find(c => c.key === k);
+  return found ? found.color : '#888780';
+}
 
 let currentDay = 0;
 let editId = null;
